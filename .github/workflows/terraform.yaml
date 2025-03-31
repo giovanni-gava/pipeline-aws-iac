@@ -99,7 +99,7 @@ jobs:
     - name: Terraform Plan with Output Capture
       id: plan
       run: |
-        terraform plan -no-color -out=tfplan.txt > envs/dev/tfplan.txt
+        terraform plan -no-color -out=tfplan.txt | tee plan_output.txt
       working-directory: envs/dev
     - name: Check for destroy operations
       id: check_destroy
