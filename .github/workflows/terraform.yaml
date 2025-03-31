@@ -1,10 +1,10 @@
-name: Terraform Pipeline
+name: Terraform Dev Pipeline
 
 on:
   pull_request:
-    branches: [development, staging, production]
+    branches: [ development ]
   push:
-    branches: [development, staging, production]
+    branches: [ development ]
 
 env:
   TF_VERSION: 1.5.0
@@ -12,146 +12,113 @@ env:
 
 jobs:
 
-  setup:
-    name: Setup
-    runs-on: ubuntu-latest
-    outputs:
-      tf-dir: ${{ steps.set-dir.outputs.tf-dir }}
-      aws-role: ${{ steps.set-role.outputs.aws-role }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set Terraform Directory by Branch
-        id: set-dir
-        run: |
-          case "${{ github.ref_name }}" in
-            development) echo "tf-dir=envs/dev" >> $GITHUB_OUTPUT ;;
-            staging) echo "tf-dir=envs/staging" >> $GITHUB_OUTPUT ;;
-            production) echo "tf-dir=envs/prod" >> $GITHUB_OUTPUT ;;
-          esac
-
-      - name: Set AWS Role by Branch
-        id: set-role
-        run: |
-          case "${{ github.ref_name }}" in
-            development) echo "aws-role=${{ secrets.AWS_ROLE_DEV }}" >> $GITHUB_OUTPUT ;;
-            staging) echo "aws-role=${{ secrets.AWS_ROLE_STAGING }}" >> $GITHUB_OUTPUT ;;
-            production) echo "aws-role=${{ secrets.AWS_ROLE_PROD }}" >> $GITHUB_OUTPUT ;;
-          esac
-
   fmt:
     name: Terraform Format Check
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Run terraform fmt
-        run: terraform fmt -check -recursive
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+    - name: Run terraform fmt
+      run: terraform fmt -check -recursive
 
   validate:
     name: Terraform Validate
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: setup
     steps:
-      - uses: actions/checkout@v3
-      - uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - name: Terraform Init & Validate
-        run: |
-          terraform -chdir=${{ needs.setup.outputs.tf-dir }} init -backend=false
-          terraform -chdir=${{ needs.setup.outputs.tf-dir }} validate
+    - uses: actions/checkout@v3
+    - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+    - name: Terraform Init & Validate
+      run: |
+        terraform -chdir=envs/dev init -backend=false
+        terraform -chdir=envs/dev validate
 
   lint:
     name: Terraform Lint
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: setup
     steps:
-      - uses: actions/checkout@v3
-      - uses: terraform-linters/setup-tflint@v4
-      - run: |
-          cd ${{ needs.setup.outputs.tf-dir }}
-          tflint --init
-          tflint
+    - uses: actions/checkout@v3
+    - uses: terraform-linters/setup-tflint@v4
+    - run: |
+        cd envs/dev
+        tflint --init
+        tflint
 
   security:
     name: TFSec Scan
     runs-on: ubuntu-latest
-    needs: setup
     steps:
-      - uses: actions/checkout@v3
-      - uses: aquasecurity/tfsec-action@v1.0.0
-        with:
-          working_directory: ${{ needs.setup.outputs.tf-dir }}
+    - uses: actions/checkout@v3
+    - uses: aquasecurity/tfsec-action@v1.0.0
+      with:
+        working_directory: envs/dev
 
   cost:
     name: Infracost
     runs-on: ubuntu-latest
-    needs: setup
     steps:
-      - uses: actions/checkout@v3
-      - uses: infracost/actions/setup@v2
-        with:
-          api-key: ${{ secrets.INFRACOST_API_KEY }}
-      - run: |
-          infracost breakdown --path=${{ needs.setup.outputs.tf-dir }} --format=table
+    - uses: actions/checkout@v3
+    - uses: infracost/actions/setup@v2
+      with:
+        api-key: ${{ secrets.INFRACOST_API_KEY }}
+    - run: |
+        infracost breakdown --path=envs/dev --format=table
 
   plan:
-    name: Terraform Plan
+    name: Terraform Plan (DEV)
     runs-on: ubuntu-latest
-    needs: setup
     if: github.event_name != 'pull_request'
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ needs.setup.outputs.aws-role }}
-          aws-region: ${{ env.AWS_REGION }}
-      - uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - run: terraform init
-        working-directory: ${{ needs.setup.outputs.tf-dir }}
-      - run: terraform plan -no-color
-        working-directory: ${{ needs.setup.outputs.tf-dir }}
+    - uses: actions/checkout@v3
+    - uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
+        aws-region: ${{ env.AWS_REGION }}
+    - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+    - run: terraform init
+      working-directory: envs/dev
+    - run: terraform plan -no-color
+      working-directory: envs/dev
 
   terratest:
     name: TerraTest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v4
-        with:
-          go-version: 1.20
-      - run: |
-          cd tests
-          go test -v ./...
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20
+    - run: |
+        cd tests
+        go test -v ./...
 
   apply:
-    name: Terraform Apply
+    name: Terraform Apply (DEV)
     runs-on: ubuntu-latest
-    needs: [setup, plan]
+    needs: [ plan ]
     if: github.event_name != 'pull_request'
     permissions:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v3
-      - uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: ${{ needs.setup.outputs.aws-role }}
-          aws-region: ${{ env.AWS_REGION }}
-      - uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
-      - run: terraform apply -auto-approve
-        working-directory: ${{ needs.setup.outputs.tf-dir }}
+    - uses: actions/checkout@v3
+    - uses: aws-actions/configure-aws-credentials@v2
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
+        aws-region: ${{ env.AWS_REGION }}
+    - uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+    - run: terraform apply -auto-approve
+      working-directory: envs/dev
