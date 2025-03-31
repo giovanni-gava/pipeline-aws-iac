@@ -1,0 +1,141 @@
+name: Terraform Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  TF_VERSION: 1.5.0
+  AWS_REGION: us-east-1
+  TERRAFORM_WORKING_DIR: envs/dev  # pode ser dinamizado
+
+jobs:
+
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      tf-dir: ${{ steps.set-dir.outputs.tf-dir }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set Terraform Directory
+        id: set-dir
+        run: echo "tf-dir=${{ env.TERRAFORM_WORKING_DIR }}" >> $GITHUB_OUTPUT
+
+  lint:
+    name: Terraform Lint
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Format Check
+        run: terraform fmt -check -recursive ${{ needs.setup.outputs.tf-dir }}
+
+      - name: TFLint
+        uses: terraform-linters/setup-tflint@v4
+      - run: |
+          cd ${{ needs.setup.outputs.tf-dir }}
+          tflint --init
+          tflint
+
+  security:
+    name: TFSec Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: aquasecurity/tfsec-action@v1.0.0
+        with:
+          working_directory: ${{ env.TERRAFORM_WORKING_DIR }}
+
+  cost:
+    name: Infracost
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v2
+        with:
+          api-key: ${{ secrets.INFRACOST_API_KEY }}
+
+      - name: Generate cost estimate
+        run: |
+          infracost breakdown --path=${{ env.TERRAFORM_WORKING_DIR }} --format=table
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: setup
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ${{ needs.setup.outputs.tf-dir }}
+
+      - name: Terraform Plan
+        run: terraform plan -no-color
+        working-directory: ${{ needs.setup.outputs.tf-dir }}
+
+  terratest:
+    name: TerraTest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20
+
+      - name: Run TerraTest
+        run: |
+          cd tests
+          go test -v ./...
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ${{ env.TERRAFORM_WORKING_DIR }}
