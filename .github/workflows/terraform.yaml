@@ -126,6 +126,9 @@ jobs:
 
   apply:
     name: Terraform Apply (DEV)
+    concurrency:
+      group: tf-apply-dev
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     needs: [ plan ]
     if: needs.plan.outputs.destroy_detected == 'false' && github.event_name != 'pull_request'
