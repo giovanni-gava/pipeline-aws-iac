@@ -22,7 +22,7 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     - name: Run terraform fmt
-      run: terraform fmt -check -recursive
+      run: terraform fmt -check -diff -recursive
 
   validate:
     name: Terraform Validate
