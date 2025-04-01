@@ -1,4 +1,4 @@
-resource "aws_subnet" "private" {
+resource "aws_subnet" "private_public" {
   for_each = var.subnets
 
   vpc_id            = var.vpc_id
