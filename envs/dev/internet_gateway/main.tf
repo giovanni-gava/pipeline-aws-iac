@@ -8,7 +8,7 @@ data "terraform_remote_state" "vpc" {
 }
 
 module "internet_gateway" {
-  source = "../../modules/internet_gateway"
+  source = "../../../modules/internet_gateway"
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
   name   = "igw-dev"
 }
