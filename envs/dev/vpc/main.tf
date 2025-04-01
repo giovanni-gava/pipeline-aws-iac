@@ -7,21 +7,3 @@ module "vpc" {
   tags                 = local.common_tags
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
