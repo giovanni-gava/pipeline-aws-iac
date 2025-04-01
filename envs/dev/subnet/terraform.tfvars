@@ -18,6 +18,12 @@ subnets = {
     az         = "eu-west-1a"
     type       = "public"
     map_public_ip_on_launch = true
+  },
+   "aws-subnet-4" = {
+    cidr_block = "10.0.4.0/24"
+    az         = "eu-west-1a"
+    type       = "public"
+    map_public_ip_on_launch = true
   }
 }
 
