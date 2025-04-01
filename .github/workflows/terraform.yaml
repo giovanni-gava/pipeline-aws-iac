@@ -89,7 +89,7 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     - name: Fetch full git history
-      run: git fetch --no-tags --prune --depth=0 origin
+      run: git fetch --no-tags --prune origin
     - name: Detect changed Terraform directories
       id: detect_dirs
       run: |
@@ -155,7 +155,7 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     - name: Fetch full git history
-      run: git fetch --no-tags --prune --depth=0 origin
+      run: git fetch --no-tags --prune origin
     - name: Apply Terraform for changed modules
       run: |
         changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
