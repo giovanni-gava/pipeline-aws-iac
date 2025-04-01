@@ -1,9 +1,9 @@
-name        = "app-server"
-ami_id      = "ami-0df368112825f8d8f"
-key_name    = "aws-dev-test-linux"
-instance_type = "t3.micro"
-subnet_id     = "subnet-123abc" # ou use data.terraform_remote_state se preferir
-security_group_ids = ["sg-12345678"]
+name                        = "app-server"
+ami_id                      = "ami-0df368112825f8d8f"
+key_name                    = "aws-dev-test-linux"
+instance_type               = "t3.micro"
+subnet_id                   = "subnet-123abc" # ou use data.terraform_remote_state se preferir
+security_group_ids          = ["sg-12345678"]
 associate_public_ip_address = false
 
 tags = {
