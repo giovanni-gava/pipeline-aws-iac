@@ -1,32 +1,28 @@
 package test
 
 import (
-	"testing"
 	"strings"
+	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/terraform"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestPrivateSubnet(t *testing.T) {
-	t.Parallel()
-
 	terraformOptions := &terraform.Options{
 		TerraformDir: "../",
-
-		// Evita que o teste aplique mudanças reais
-		NoColor: true,
-		Upgrade: true,
+		NoColor:      true,
+		Upgrade:      true,
 	}
 
-	// Inicializa e aplica o Terraform (modo dry-run para pegar outputs)
-	terraform.InitAndPlan(t, terraformOptions)
-	outputs := terraform.OutputAll(t, terraformOptions)
+	// Inicializa e aplica o Terraform (necessário para capturar outputs)
+	terraform.InitAndApply(t, terraformOptions)
 
-	// Validando outputs esperados
-	vpcID := outputs["vpc_id"].(string)
-	subnetID := outputs["subnet_id"].(string)
-	cidrBlock := outputs["subnet_cidr_block"].(string)
+	defer terraform.Destroy(t, terraformOptions) // destrói recursos após o teste
+
+	vpcID := terraform.Output(t, terraformOptions, "vpc_id")
+	subnetID := terraform.Output(t, terraformOptions, "subnet_id")
+	cidrBlock := terraform.Output(t, terraformOptions, "subnet_cidr_block")
 
 	assert.True(t, strings.HasPrefix(vpcID, "vpc-"), "VPC ID deve começar com 'vpc-'")
 	assert.True(t, strings.HasPrefix(subnetID, "subnet-"), "Subnet ID deve começar com 'subnet-'")
