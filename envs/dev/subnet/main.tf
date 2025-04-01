@@ -8,8 +8,8 @@ data "terraform_remote_state" "vpc" {
 }
 
 module "aws_subnet" {
-  source     = "../../../modules/subnet_private"
+  source     = "../../../modules/subnet"
   vpc_id     = data.terraform_remote_state.vpc.outputs.vpc_id
-  subnets = var.subnets
+  subnets    = var.subnets
   tags       = local.common_tags
 }
