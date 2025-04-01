@@ -79,6 +79,7 @@ jobs:
       contents: read
     outputs:
       has_changes: ${{ steps.detect_dirs.outputs.has_changes }}
+      changed_dirs: ${{ steps.detect_dirs.outputs.changed_dirs }}
     steps:
     - uses: actions/checkout@v3
     - uses: aws-actions/configure-aws-credentials@v2
@@ -93,9 +94,10 @@ jobs:
     - name: Detect changed Terraform directories
       id: detect_dirs
       run: |
-        changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        echo "🔍 Buscando alterações entre ${{ github.event.before }} e ${{ github.sha }}"
+        changed=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
         echo "🧪 Arquivos modificados detectados:"
-        git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' || echo "Nenhum arquivo .tf modificado"
+        echo "$changed"
         echo "changed_dirs=$changed" >> $GITHUB_OUTPUT
         if [ -n "$changed" ]; then
           echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -158,7 +160,7 @@ jobs:
       run: git fetch --no-tags --prune origin
     - name: Apply Terraform for changed modules
       run: |
-        changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed="${{ needs.plan.outputs.changed_dirs }}"
         for dir in $changed; do
           echo "🚀 Aplicando mudanças em: $dir"
           terraform -chdir="$dir" init -backend=true -reconfigure
