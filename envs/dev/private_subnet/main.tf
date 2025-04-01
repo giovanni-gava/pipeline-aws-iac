@@ -1,7 +1,7 @@
 data "terraform_remote_state" "vpc" {
   backend = "s3" # ou "local", "remote", etc.
   config = {
-    bucket = "meu-terraform-estado"
+    bucket = "aws-tf-state-giovanni-dev"
     key    = "dev/network/vpc/terraform.tfstate"
     region = "us-east-1"
   }
