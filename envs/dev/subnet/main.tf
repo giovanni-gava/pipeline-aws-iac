@@ -13,11 +13,3 @@ module "aws_subnet" {
   subnets = var.subnets
   tags    = local.common_tags
 }
-
-
-
-
-
-
-
-

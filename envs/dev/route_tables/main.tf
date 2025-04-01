@@ -24,6 +24,14 @@ data "terraform_remote_state" "internet_gateway" {
   }
 }
 
+data "terraform_remote_state" "vpc" {
+  backend = "s3" # ou "local", "remote", etc.
+  config = {
+    bucket = "aws-tf-state-giovanni-development"
+    key    = "dev/network/vpc/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
 
 module "route_table" {
   source = "../../../modules/route_tables"
