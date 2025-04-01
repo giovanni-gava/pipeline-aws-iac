@@ -1,4 +1,4 @@
-data "terraform_remote_state" "vpc" {
+data "terraform_remote_state" "subnet" {
   backend = "s3" # ou "local", "remote", etc.
   config = {
     bucket = "aws-tf-state-giovanni-development"
@@ -14,10 +14,10 @@ module "nat_gateway" {
 
   nat_gateways = {
     "eu-west-1a" = {
-      public_subnet_id = data.terraform_remote_state.private_subnet.outputs.public_subnet_ids_by_az["eu-west-1a"][0]
+      public_subnet_id = data.terraform_remote_state.subnet.outputs.public_subnet_ids_by_az["eu-west-1a"][0]
     },
     "eu-west-1b" = {
-      public_subnet_id = data.terraform_remote_state.private_subnet.outputs.public_subnet_ids_by_az["eu-west-1b"][0]
+      public_subnet_id = data.terraform_remote_state.subnet.outputs.public_subnet_ids_by_az["eu-west-1b"][0]
     }
   }
 }
