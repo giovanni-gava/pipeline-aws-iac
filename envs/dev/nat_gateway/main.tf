@@ -2,7 +2,7 @@ data "terraform_remote_state" "subnet" {
   backend = "s3" # ou "local", "remote", etc.
   config = {
     bucket = "aws-tf-state-giovanni-development"
-    key    = "dev/network/private_subnet/terraform.tfstate"
+    key    = "dev/network/subnet/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -21,4 +21,12 @@ module "nat_gateway" {
     }
   }
 }
+
+
+
+
+
+
+
+
 
