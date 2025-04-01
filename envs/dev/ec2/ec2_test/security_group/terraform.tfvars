@@ -1,5 +1,5 @@
 security_group_name        = "web-sg"
-security_group_description = "SG para aplicação web"
+security_group_description = "SG para aplicacao web"
 vpc_id                     = "vpc-1234567890abcdef0"
 
 ingress_rules = [
