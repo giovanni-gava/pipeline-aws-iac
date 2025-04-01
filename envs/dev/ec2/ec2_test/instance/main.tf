@@ -23,7 +23,7 @@ module "ec2_app" {
   key_name                     = var.key_name
   ami_id                       = var.ami_id
   instance_type                = var.instance_type
-  subnet_id                    = data.terraform_remote_state.subnet.outputs.private_subnet_ids_by_az[""][0]
+  subnet_id                    = data.terraform_remote_state.subnet.outputs.private_subnet_ids_by_az["eu-west-1a"][0]
   security_group_ids           = data.terraform_remote_state.security_group.outputs.security_group_ids
   associate_public_ip_address  = var.associate_public_ip_address
   tags                         = var.tags
