@@ -14,3 +14,9 @@ variable "az" {
 variable "name" {
   type = string
 }
+
+variable "tags" {
+  description = "Tags a serem aplicadas aos recursos"
+  type        = map(string)
+  default     = {}
+}
