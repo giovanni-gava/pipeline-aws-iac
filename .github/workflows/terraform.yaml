@@ -153,7 +153,7 @@ jobs:
         for dir in ${{ steps.detect_dirs.outputs.changed_dirs }}; do
           echo "📁 Rodando terraform plan em: $dir"
           terraform -chdir="$dir" init -backend=true -reconfigure
-          terraform -chdir="$dir" plan -no-color
+          terraform -chdir="$dir" plan -var-file="terraform.tfvars" -no-color
         done
 
   terratest:
@@ -214,5 +214,5 @@ jobs:
         for dir in $changed; do
           echo "🚀 Aplicando mudanças em: $dir"
           terraform -chdir="$dir" init -backend=true -reconfigure
-          terraform -chdir="$dir" apply -auto-approve
+          terraform -chdir="$dir" apply -var-file="terraform.tfvars" -auto-approve
         done
