@@ -3,6 +3,11 @@ variable "name" {
   type        = string
 }
 
+variable "key_name" {
+  description = "Nome da chave SSH"
+  type        = string
+}
+
 variable "ami_id" {
   description = "AMI ID da instância"
   type        = string

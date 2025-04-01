@@ -4,6 +4,7 @@ resource "aws_instance" "this" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.security_group_ids
   associate_public_ip_address = var.associate_public_ip_address
+  key_name                = var.key_name
 
   tags = merge(var.tags, {
     Name = var.name
