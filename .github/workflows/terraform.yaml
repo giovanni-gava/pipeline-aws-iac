@@ -86,24 +86,31 @@ jobs:
     - uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
-    - run: terraform init -backend=true -reconfigure
-      working-directory: envs/dev
-    - run: terraform plan -no-color
-      working-directory: envs/dev
+    - name: Detect changed Terraform directories
+      id: detect_dirs
+      run: |
+        changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u)
+        echo "changed=$changed" >> $GITHUB_OUTPUT
+    - name: Run Terraform Plan for changed modules
+      if: ${{ steps.detect_dirs.outputs.changed != '' }}
+      run: |
+        for dir in ${{ steps.detect_dirs.outputs.changed }}; do
+          echo "📁 Rodando terraform plan em: $dir"
+          terraform -chdir="$dir" init -backend=true -reconfigure
+          terraform -chdir="$dir" plan -no-color
+        done
 
   terratest:
     name: TerraTest
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
     - uses: actions/setup-go@v4
       with:
         go-version: 1.20
-
     - name: Run TerraTest for each module with test.go
       run: |
-        find envs/dev -type f -path "*/terratest/test.go" | while read file; do
+        find envs/dev -type f -path "*/tests/test.go" | while read file; do
           test_dir=$(dirname "$file")
           echo "🔍 Running TerraTest in $test_dir"
           cd "$test_dir"
@@ -117,7 +124,6 @@ jobs:
           fi
 
           go test -v ./...
-
           cd -
         done
 
@@ -138,7 +144,16 @@ jobs:
     - uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
-    - run: terraform init -reconfigure
-      working-directory: envs/dev
-    - run: terraform apply -auto-approve
-      working-directory: envs/dev
+    - name: Detect changed Terraform directories
+      id: detect_dirs_apply
+      run: |
+        changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u)
+        echo "changed=$changed" >> $GITHUB_OUTPUT
+    - name: Run Terraform Apply for changed modules
+      if: ${{ steps.detect_dirs_apply.outputs.changed != '' }}
+      run: |
+        for dir in ${{ steps.detect_dirs_apply.outputs.changed }}; do
+          echo "🚀 Aplicando mudanças em: $dir"
+          terraform -chdir="$dir" init -backend=true -reconfigure
+          terraform -chdir="$dir" apply -auto-approve
+        done
