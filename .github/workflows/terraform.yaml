@@ -36,7 +36,7 @@ jobs:
     - name: Run Terraform Validate for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para validate"
           exit 0
@@ -57,7 +57,7 @@ jobs:
     - name: Run TFLint for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para lint"
           exit 0
@@ -75,15 +75,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-
-    - name: Install tfsec
-      run: |
-        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
-
     - name: Run tfsec for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para tfsec"
           exit 0
@@ -104,7 +99,7 @@ jobs:
     - name: Run Infracost for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para Infracost"
           exit 0
@@ -139,7 +134,7 @@ jobs:
       id: detect_dirs
       run: |
         echo "🔍 Detectando alterações desde o commit anterior"
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
         echo "🧪 Arquivos modificados detectados: $changed"
         echo "changed_dirs=$changed" >> $GITHUB_OUTPUT
         if [ -n "$changed" ]; then
@@ -158,6 +153,9 @@ jobs:
 
   terratest:
     name: TerraTest
+    concurrency:
+      group: terraform-apply-dev
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
@@ -168,7 +166,7 @@ jobs:
     - name: Run TerraTest for changed modules with test.go
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para TerraTest"
           exit 0
@@ -191,6 +189,9 @@ jobs:
 
   apply:
     name: Terraform Apply (DEV)
+    concurrency:
+      group: terraform-apply-dev
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     needs: [ plan ]
     if: needs.plan.outputs.has_changes == 'true' && github.event_name != 'pull_request'
