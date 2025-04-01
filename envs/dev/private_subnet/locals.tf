@@ -1,6 +1,6 @@
 locals {
   common_tags = {
-    domain = "BR"
-    terraform = "true"   
+    domain    = "BR"
+    terraform = "true"
   }
 }

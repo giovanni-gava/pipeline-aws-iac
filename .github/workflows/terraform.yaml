@@ -5,12 +5,6 @@ on:
     branches: [ development ]
   push:
     branches: [ development ]
-  workflow_dispatch:
-    inputs:
-      target_resource:
-        description: "Terraform resource to destroy (e.g., aws_s3_bucket.meu_bucket)"
-        required: true
-        default: "aws_s3_bucket.meu_bucket"
 
 env:
   TF_VERSION: 1.5.0
@@ -28,7 +22,7 @@ jobs:
       with:
         terraform_version: ${{ env.TF_VERSION }}
     - name: Run terraform fmt
-      run: terraform fmt -check -diff -recursive
+      run: terraform fmt -check -recursive
 
   validate:
     name: Terraform Validate
@@ -83,8 +77,6 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    outputs:
-      destroy_detected: ${{ steps.check_destroy.outputs.destroy_found }}
     steps:
     - uses: actions/checkout@v3
     - uses: aws-actions/configure-aws-credentials@v2
@@ -96,71 +88,26 @@ jobs:
         terraform_version: ${{ env.TF_VERSION }}
     - run: terraform init -reconfigure
       working-directory: envs/dev
-    - name: Terraform Plan with Output Capture
-      id: plan
-      run: |
-        terraform plan -no-color -out=tfplan.binary | tee plan_output.txt
-    - name: Upload Plan Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: tfplan
-        path: envs/dev/tfplan.binary
-        working-directory: envs/dev
-    - name: Check for destroy operations
-      id: check_destroy
-      run: |
-        if grep -q "^-" envs/dev/plan_output.txt; then
-          echo "Destroy operation detected."
-          echo "destroy_found=true" >> $GITHUB_OUTPUT
-        else
-          echo "No destroy operations."
-          echo "destroy_found=false" >> $GITHUB_OUTPUT
-        fi
+    - run: terraform plan -no-color
+      working-directory: envs/dev
 
-  # terratest:
-  #   name: TerraTest
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - uses: actions/setup-go@v4
-  #     with:
-  #       go-version: 1.20
-  #   - run: |
-  #       cd tests
-  #       go test -v ./...
+  terratest:
+    name: TerraTest
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
+      with:
+        go-version: 1.20
+    - run: |
+        cd tests
+        go test -v ./...
 
   apply:
     name: Terraform Apply (DEV)
-    concurrency:
-      group: tf-apply-dev
-      cancel-in-progress: false
     runs-on: ubuntu-latest
     needs: [ plan ]
-    if: needs.plan.outputs.destroy_detected == 'false' && github.event_name != 'pull_request'
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-    - uses: actions/checkout@v3
-    - uses: aws-actions/configure-aws-credentials@v2
-      with:
-        role-to-assume: ${{ secrets.AWS_ROLE_DEV }}
-        aws-region: ${{ env.AWS_REGION }}
-    - uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: ${{ env.TF_VERSION }}
-    - name: Download Plan Artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: tfplan
-        path: envs/dev
-    - run: terraform apply -auto-approve envs/dev/tfplan.binary
-      working-directory: envs/dev
-
-  destroy:
-    name: Terraform Destroy (specific resource)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request'
     permissions:
       id-token: write
       contents: read
@@ -175,6 +122,5 @@ jobs:
         terraform_version: ${{ env.TF_VERSION }}
     - run: terraform init -reconfigure
       working-directory: envs/dev
-    - name: Destroy specific resource
-      run: terraform destroy -target=${{ github.event.inputs.target_resource }} -auto-approve
+    - run: terraform apply -auto-approve
       working-directory: envs/dev
