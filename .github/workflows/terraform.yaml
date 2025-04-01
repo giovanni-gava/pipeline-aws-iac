@@ -92,12 +92,16 @@ jobs:
       id: detect_dirs
       run: |
         changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        echo "🧪 Arquivos modificados detectados:"
+        git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' || echo "Nenhum arquivo .tf modificado"
+        echo "🔍 Diretórios detectados: $changed"
         echo "changed_dirs=$changed" >> $GITHUB_OUTPUT
         if [ -n "$changed" ]; then
           echo "has_changes=true" >> $GITHUB_OUTPUT
         else
           echo "has_changes=false" >> $GITHUB_OUTPUT
         fi
+
     - name: Run Terraform Plan for changed modules
       if: ${{ steps.detect_dirs.outputs.has_changes == 'true' }}
       run: |
