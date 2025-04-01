@@ -17,7 +17,7 @@ data "terraform_remote_state" "security_group" {
 }
 
 module "ec2_app" {
-  source = "../../../modules/ec2"
+  source = "../../../../../modules/ec2"
 
   name                         = var.name
   key_name                     = var.key_name
