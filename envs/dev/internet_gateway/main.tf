@@ -12,3 +12,5 @@ module "internet_gateway" {
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
   name   = "igw-dev"
 }
+
+
