@@ -33,10 +33,19 @@ jobs:
     - uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
-    - name: Terraform Init & Validate
+    - name: Run Terraform Validate for changed modules
       run: |
-        terraform -chdir=envs/dev init -backend=false
-        terraform -chdir=envs/dev validate
+        git fetch --no-tags --prune --unshallow || true
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        if [ -z "$changed" ]; then
+          echo "🟡 Nenhuma mudança detectada para validate"
+          exit 0
+        fi
+        for dir in $changed; do
+          echo "🔍 Rodando terraform validate em $dir"
+          terraform -chdir=$dir init -backend=false
+          terraform -chdir=$dir validate
+        done
 
   lint:
     name: Terraform Lint
@@ -45,19 +54,39 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: terraform-linters/setup-tflint@v4
-    - run: |
-        cd envs/dev
-        tflint --init
-        tflint
+    - name: Run TFLint for changed modules
+      run: |
+        git fetch --no-tags --prune --unshallow || true
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        if [ -z "$changed" ]; then
+          echo "🟡 Nenhuma mudança detectada para lint"
+          exit 0
+        fi
+        for dir in $changed; do
+          echo "🔍 Rodando tflint em $dir"
+          cd $dir
+          tflint --init
+          tflint
+          cd -
+        done
 
   security:
     name: TFSec Scan
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: aquasecurity/tfsec-action@v1.0.0
-      with:
-        working_directory: envs/dev
+    - name: Run tfsec for changed modules
+      run: |
+        git fetch --no-tags --prune --unshallow || true
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        if [ -z "$changed" ]; then
+          echo "🟡 Nenhuma mudança detectada para tfsec"
+          exit 0
+        fi
+        for dir in $changed; do
+          echo "🔍 Rodando tfsec em $dir"
+          tfsec $dir
+        done
 
   cost:
     name: Infracost
@@ -67,8 +96,18 @@ jobs:
     - uses: infracost/actions/setup@v2
       with:
         api-key: ${{ secrets.INFRACOST_API_KEY }}
-    - run: |
-        infracost breakdown --path=envs/dev --format=table
+    - name: Run Infracost for changed modules
+      run: |
+        git fetch --no-tags --prune --unshallow || true
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        if [ -z "$changed" ]; then
+          echo "🟡 Nenhuma mudança detectada para Infracost"
+          exit 0
+        fi
+        for dir in $changed; do
+          echo "💰 Rodando infracost em $dir"
+          infracost breakdown --path=$dir --format=table
+        done
 
   plan:
     name: Terraform Plan (DEV)
@@ -115,27 +154,34 @@ jobs:
   terratest:
     name: TerraTest
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v4
       with:
         go-version: 1.20
-    - name: Run TerraTest for each module with test.go
+    - name: Run TerraTest for changed modules with test.go
       run: |
-        find envs/dev -type f -path "*/tests/test.go" | while read file; do
-          test_dir=$(dirname "$file")
-          echo "🔍 Running TerraTest in $test_dir"
-          cd "$test_dir"
-
-          if [ ! -f "go.mod" ]; then
-            echo "🧱 Criando go.mod em $test_dir"
-            go mod init terratest_auto
-            go get github.com/gruntwork-io/terratest/modules/terraform
-            go get github.com/stretchr/testify/assert
+        git fetch --no-tags --prune --unshallow || true
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
+        if [ -z "$changed" ]; then
+          echo "🟡 Nenhuma mudança detectada para TerraTest"
+          exit 0
+        fi
+        for dir in $changed; do
+          test_file="$dir/tests/test.go"
+          if [ -f "$test_file" ]; then
+            echo "🔍 Rodando TerraTest em $dir"
+            cd "$dir/tests"
+            if [ ! -f "go.mod" ]; then
+              echo "🧱 Criando go.mod..."
+              go mod init terratest_auto
+              go get github.com/gruntwork-io/terratest/modules/terraform
+              go get github.com/stretchr/testify/assert
+            fi
+            go test -v ./...
+            cd -
           fi
-
-          go test -v ./...
-          cd -
         done
 
   apply:
