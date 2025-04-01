@@ -1,15 +1,17 @@
-
-variable "cidr_block" {
-  type    = string
-  default = "10.1.0.0/20"
+variable "vpc_id" {
+  type = string
 }
 
-variable "az" {
-  type    = string
-  default = "eu-west-1a"
+variable "subnets" {
+  description = "Mapa de subnets com nome, CIDR e AZ"
+  type = map(object({
+    cidr_block = string
+    az         = string
+  }))
 }
 
-variable "name" {
-  type    = string
-  default = "subnet1-private-a"
+variable "tags" {
+  description = "Tags comuns para todos os recursos"
+  type        = map(string)
+  default     = {}
 }
