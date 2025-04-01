@@ -1,5 +1,5 @@
 module "vpc" {
-  source               = "../../..modules/vpc"
+  source               = "../../../modules/vpc"
   name                 = var.name
   cidr_block           = var.cidr_block
   enable_dns_support   = var.enable_dns_support
@@ -7,3 +7,4 @@ module "vpc" {
   tags                 = local.common_tags
 
 }
+
