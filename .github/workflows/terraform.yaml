@@ -75,6 +75,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
+    - name: Install tfsec
+      run: |
+        curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
+
     - name: Run tfsec for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
