@@ -1,3 +1,21 @@
+data "terraform_remote_state" "subnet" {
+  backend = "s3" # ou "local", "remote", etc.
+  config = {
+    bucket = "aws-tf-state-giovanni-development"
+    key    = "dev/network/subnet/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+data "terraform_remote_state" "nat_gateway" {
+  backend = "s3" # ou "local", "remote", etc.
+  config = {
+    bucket = "aws-tf-state-giovanni-development"
+    key    = "dev/network/nat_gateway/terraform.tfstate"
+    region = "us-east-1"
+  }
+}
+
+
 module "route_table" {
   source = "../../../modules/route_tables"
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
