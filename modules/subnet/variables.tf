@@ -5,6 +5,7 @@ variable "subnets" {
     az         = string
     map_public_ip_on_launch = bool
     type                    = string  # "public" ou "private"
+    
   }))
 }
 

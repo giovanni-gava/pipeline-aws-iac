@@ -13,11 +13,11 @@ module "nat_gateway" {
   tags   = local.common_tags
 
   nat_gateways = {
-    az1 = {
-      public_subnet_id = module.subnet_public.subnet_ids["az1"]
+    "eu-west-1a" = {
+      public_subnet_id = data.terraform_remote_state.subnet.outputs.public_subnet_ids_by_az["eu-west-1a"]
     },
-    az2 = {
-      public_subnet_id = module.subnet_public.subnet_ids["az2"]
+    "eu-west-1b" = {
+      public_subnet_id = data.terraform_remote_state.subnet.outputs.public_subnet_ids_by_az["eu-west-1b"]
     }
   }
 }
