@@ -2,7 +2,7 @@ data "terraform_remote_state" "vpc" {
   backend = "s3" # ou "local", "remote", etc.
   config = {
     bucket = "aws-tf-state-giovanni-development"
-    key    = "dev/network/subnet/terraform.tfstate"
+    key    = "dev/network/private_subnet/terraform.tfstate"
     region = "us-east-1"
   }
 }
