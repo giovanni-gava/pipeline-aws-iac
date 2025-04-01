@@ -77,6 +77,8 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      has_changes: ${{ steps.detect_dirs.outputs.has_changes }}
     steps:
     - uses: actions/checkout@v3
     - uses: aws-actions/configure-aws-credentials@v2
@@ -90,10 +92,14 @@ jobs:
       id: detect_dirs
       run: |
         changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
-        echo "changed_dirs=$changed" >> $GITHUB_ENV
         echo "changed_dirs=$changed" >> $GITHUB_OUTPUT
+        if [ -n "$changed" ]; then
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
     - name: Run Terraform Plan for changed modules
-      if: ${{ steps.detect_dirs.outputs.changed_dirs != '' }}
+      if: ${{ steps.detect_dirs.outputs.has_changes == 'true' }}
       run: |
         for dir in ${{ steps.detect_dirs.outputs.changed_dirs }}; do
           echo "📁 Rodando terraform plan em: $dir"
@@ -131,7 +137,7 @@ jobs:
     name: Terraform Apply (DEV)
     runs-on: ubuntu-latest
     needs: [ plan ]
-    if: github.event_name != 'pull_request'
+    if: needs.plan.outputs.has_changes == 'true' && github.event_name != 'pull_request'
     permissions:
       id-token: write
       contents: read
@@ -144,16 +150,10 @@ jobs:
     - uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
-    - name: Detect changed Terraform directories
-      id: detect_dirs_apply
+    - name: Apply Terraform for changed modules
       run: |
         changed=$(git diff --name-only origin/development HEAD | grep '^envs/dev/.*/.*\.tf$' | cut -d/ -f1-3 | sort -u | tr '\n' ' ')
-        echo "changed_dirs=$changed" >> $GITHUB_ENV
-        echo "changed_dirs=$changed" >> $GITHUB_OUTPUT
-    - name: Run Terraform Apply for changed modules
-      if: ${{ steps.detect_dirs_apply.outputs.changed_dirs != '' }}
-      run: |
-        for dir in ${{ steps.detect_dirs_apply.outputs.changed_dirs }}; do
+        for dir in $changed; do
           echo "🚀 Aplicando mudanças em: $dir"
           terraform -chdir="$dir" init -backend=true -reconfigure
           terraform -chdir="$dir" apply -auto-approve
