@@ -96,12 +96,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - uses: actions/setup-go@v4
       with:
         go-version: 1.20
-    - run: |
-        cd tests
-        go test -v ./...
+
+    - name: Run TerraTest for each module with test.go
+      run: |
+        find envs/dev -type f -path "*/terratest/test.go" | while read file; do
+          test_dir=$(dirname "$file")
+          echo "🔍 Running TerraTest in $test_dir"
+          cd "$test_dir"
+
+          # Cria go.mod e instala dependências se ainda não existir
+          if [ ! -f "go.mod" ]; then
+            echo "🧱 Criando go.mod em $test_dir"
+            go mod init terratest_auto
+            go get github.com/gruntwork-io/terratest/modules/terraform
+            go get github.com/stretchr/testify/assert
+          fi
+
+          go test -v ./...
+
+          cd -
+        done
 
   apply:
     name: Terraform Apply (DEV)
