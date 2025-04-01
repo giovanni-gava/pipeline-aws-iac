@@ -88,6 +88,10 @@ jobs:
     - uses: hashicorp/setup-terraform@v2
       with:
         terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Fetch full git history
+      run: git fetch --no-tags --prune --depth=0 origin
+
     - name: Detect changed Terraform directories
       id: detect_dirs
       run: |
