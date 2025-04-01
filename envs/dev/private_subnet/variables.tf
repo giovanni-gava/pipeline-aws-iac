@@ -6,7 +6,7 @@ variable "cidr_block" {
 
 variable "az" {
   type    = string
-  default = "us-east-1a"
+  default = "eu-west-1a"
 }
 
 variable "name" {
