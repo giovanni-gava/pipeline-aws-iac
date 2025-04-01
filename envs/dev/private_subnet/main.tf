@@ -15,5 +15,3 @@ module "aws_subnet" {
   name       = var.name
   tags       = local.common_tags
 }
-
-
