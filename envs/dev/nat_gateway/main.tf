@@ -21,4 +21,3 @@ module "nat_gateway" {
     }
   }
 }
-
