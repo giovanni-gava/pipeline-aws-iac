@@ -1,6 +1,7 @@
 
 variable "cidr_block" {
   type = string
+  default = "10.1.0.0/20"
 }
 
 variable "az" {
@@ -10,4 +11,5 @@ variable "az" {
 
 variable "name" {
   type = string
+  default = "subnet1-private-a"
 }
