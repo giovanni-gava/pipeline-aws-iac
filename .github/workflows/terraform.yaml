@@ -36,7 +36,7 @@ jobs:
     - name: Run Terraform Validate for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/' | grep '\.tf$' | xargs -n1 dirname | grep '^envs/' | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para validate"
           exit 0
@@ -57,7 +57,7 @@ jobs:
     - name: Run TFLint for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/' | grep '\.tf$' | xargs -n1 dirname | grep '^envs/' | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para lint"
           exit 0
@@ -78,7 +78,7 @@ jobs:
     - name: Run tfsec for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/' | grep '\.tf$' | xargs -n1 dirname | grep '^envs/' | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para tfsec"
           exit 0
@@ -99,7 +99,7 @@ jobs:
     - name: Run Infracost for changed modules
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/' | grep '\.tf$' | xargs -n1 dirname | grep '^envs/' | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para Infracost"
           exit 0
@@ -134,7 +134,7 @@ jobs:
       id: detect_dirs
       run: |
         echo "🔍 Detectando alterações desde o commit anterior"
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/' | grep '\.tf$' | xargs -n1 dirname | grep '^envs/' | sort -u | tr '\n' ' ')
         echo "🧪 Arquivos modificados detectados: $changed"
         echo "changed_dirs=$changed" >> $GITHUB_OUTPUT
         if [ -n "$changed" ]; then
@@ -166,7 +166,7 @@ jobs:
     - name: Run TerraTest for changed modules with test.go
       run: |
         git fetch --no-tags --prune --unshallow || true
-        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/.*\.tf$' | xargs -n1 dirname | sort -u | tr '\n' ' ')
+        changed=$(git diff --name-only HEAD~1 HEAD | grep '^envs/' | grep '\.tf$' | xargs -n1 dirname | grep '^envs/' | sort -u | tr '\n' ' ')
         if [ -z "$changed" ]; then
           echo "🟡 Nenhuma mudança detectada para TerraTest"
           exit 0

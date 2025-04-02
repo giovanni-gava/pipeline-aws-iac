@@ -30,3 +30,4 @@ module "ec2_app" {
   root_block_device           = var.root_block_device
   ebs_volumes                 = var.ebs_volumes
 }
+
