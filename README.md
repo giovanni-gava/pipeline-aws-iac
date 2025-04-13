@@ -1,130 +1,150 @@
-# Terraform Infrastructure Pipeline
+# 🚀 pipeline-aws-iac
 
-A production-ready GitHub Actions pipeline for managing modular and multi-environment Terraform infrastructure with security, cost estimation, linting, and automated testing.
-
----
+This repository provides a robust and secure CI/CD pipeline to manage AWS infrastructure using Infrastructure as Code (IaC) with Terraform. The pipeline supports multi-account environments and enforces best practices for code validation, security, and deployment automation.
 
 ## ✅ Features
 
-- 🔒 Secure AWS authentication via **OIDC (no access keys)**
-- 🧹 Automatic `terraform fmt` + `validate` on Pull Requests
-- 🧪 `TerraTest` integration for infrastructure testing
-- 📊 Cost analysis with **Infracost**
-- 🔐 Security scanning with **TFSec**
-- 🚀 Multi-environment support (`development`, `staging`, `production`)
-- ✅ Merge blocking until lint and validation pass
-- 🔁 Automatic `plan` and `apply` per branch
-
----
+- **Secure Authentication**: Uses OIDC for secure GitHub-to-AWS authentication (no static credentials).
+- **Code Validation**: Automatically runs `terraform fmt` and `terraform validate` on pull requests.
+- **Cost Analysis**: Integrates with Infracost to estimate infrastructure costs.
+- **Security Scanning**: Uses TFSec to detect misconfigurations and vulnerabilities.
+- **Multi-Environment Support**: Supports isolated environments like `dev`, `staging`, and `production`.
+- **Automated Testing**: TerraTest integration for infrastructure testing.
+- **Linting and Formatting**: Enforced via `tflint` and custom linters.
+- **Branch-Based Deployments**: Automatically plans and applies Terraform configurations based on branch.
+- **Merge Control**: Prevents merging if validations or scans fail.
 
 ## 📁 Project Structure
 
 ```bash
-terraform-infra/
+pipeline-aws-iac/
 ├── .github/workflows/terraform.yml     # GitHub Actions pipeline
 ├── modules/                            # Reusable Terraform modules
 │   ├── vpc/
 │   ├── ec2/
 │   └── ...
 ├── envs/                               # Environment-specific configurations
-│   ├── dev/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   ├── terraform.tfvars
-│   │   └── backend.tf
+│   ├── development/
 │   ├── staging/
-│   └── prod/
-├── tests/                              # TerraTest files (Go)
-│   ├── vpc_test.go
-│   └── ...
-└── README.md
+│   └── production/
+├── tests/                              # TerraTest tests
+├── .tflint.hcl                         # Linting config
+└── README.md                           # Project documentation
 ```
 
----
+## 🚀 How to Use
 
-## 🚀 Environments
+### Prerequisites
 
-Each Git branch maps to an isolated environment:
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html)
+- [Terraform](https://developer.hashicorp.com/terraform/downloads)
+- GitHub Actions OIDC role properly configured on AWS
+- AWS account access with sufficient permissions
 
-| Branch        | Directory       | AWS Role             |
-|---------------|------------------|------------------------|
-| `development` | `envs/dev`       | `AWS_ROLE_DEV`         |
-| `staging`     | `envs/staging`   | `AWS_ROLE_STAGING`     |
-| `production`  | `envs/prod`      | `AWS_ROLE_PROD`        |
+### Getting Started
 
----
+1. **Clone the repository**
+```bash
+git clone https://github.com/giovanni-gava/pipeline-aws-iac.git
+cd pipeline-aws-iac
+```
 
-## 🔐 Secure Authentication
+2. **Set up environment variables**
 
-This project uses GitHub Actions **OIDC integration with AWS IAM roles**. No static credentials required.
+Create a `.env` file or export variables manually:
+```bash
+export AWS_ACCOUNT_ID=your_account_id
+export AWS_REGION=sa-east-1
+```
 
-### 👣 Steps:
+3. **Run terraform init/plan/apply**
 
-1. In AWS IAM, create a federated OIDC identity provider: `https://token.actions.githubusercontent.com`
-2. Create IAM roles per environment with trust policies matching:
-```json
-"Condition": {
-  "StringEquals": {
-    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com",
-    "token.actions.githubusercontent.com:sub": "repo:<owner>/<repo>:ref:refs/heads/<branch>"
-  }
+```bash
+cd envs/development
+terraform init
+terraform plan
+terraform apply
+```
+
+4. **Observe GitHub Actions pipeline**
+
+- Validations and linting run on PRs
+- `plan` runs on PRs
+- `apply` runs on merges to main or env branches
+
+## 📌 Available Modules
+
+Each module is located under `modules/` and can be used in your environment config like this:
+
+```hcl
+module "vpc" {
+  source = "../../modules/vpc"
+  name   = "my-vpc"
+  cidr   = "10.0.0.0/16"
+}
+
+module "ec2" {
+  source = "../../modules/ec2"
+  name   = "app-server"
+  ami_id = "ami-xxxxxxx"
+  instance_type = "t3.micro"
+  vpc_id = module.vpc.id
 }
 ```
-3. Store each role's ARN as GitHub Secret:
-   - `AWS_ROLE_DEV`
-   - `AWS_ROLE_STAGING`
-   - `AWS_ROLE_PROD`
+
+## 📊 Diagrams
+
+### Architecture Diagram
+```
+[ GitHub Actions ]
+        |
+        v
+[ terraform.yml Workflow ]
+        |
+        v
++------------------+
+|    terraform     |---> [ Plan / Apply ]
++------------------+
+        |
+        v
+[ AWS Accounts ] (dev, staging, prod)
+```
+
+### Module Usage Example
+```
++----------------+
+|  envs/dev/     |
+|  main.tf       |
++--------+-------+
+         |
+         v
++--------v-------+
+|  modules/vpc    |
++----------------+
+         |
+         v
++--------v-------+
+|  modules/ec2    |
++----------------+
+```
+
+## 🧪 Testing
+
+Tests are located in the `tests/` folder and written using [TerraTest](https://terratest.gruntwork.io/). These tests validate:
+- Resource creation
+- Networking
+- Outputs and variables
+
+## 🔐 Security
+
+- OIDC via GitHub Actions to assume IAM roles
+- TFSec integration for security checks
+- No plaintext credentials stored anywhere
+
+## 📄 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🚧 CI/CD Workflow Overview
-
-| Job         | Trigger        | Description                                  |
-|-------------|----------------|----------------------------------------------|
-| `fmt`       | PR             | Checks Terraform formatting                  |
-| `validate`  | PR             | Validates Terraform syntax                   |
-| `lint`      | PR             | Runs `tflint` for best practices             |
-| `security`  | PR & Push      | Scans for security issues via TFSec         |
-| `cost`      | PR & Push      | Displays cost estimate using Infracost      |
-| `plan`      | Push only      | Runs Terraform plan for the environment     |
-| `apply`     | Push only      | Applies infra changes with OIDC role        |
-| `terratest` | PR & Push      | Executes infrastructure tests in Go         |
-
----
-
-## ✅ Branch Protection Rules
-
-To enable safe and clean code:
-
-- Require PR review before merging
-- Require status checks to pass:
-  - `fmt`
-  - `validate`
-
----
-
-## 📦 Requirements
-
-- GitHub repository
-- AWS account with IAM roles and OIDC enabled
-- GitHub Secrets:
-  - `AWS_ROLE_DEV`, `AWS_ROLE_STAGING`, `AWS_ROLE_PROD`
-  - `INFRACOST_API_KEY`
-
----
-
-## 🤝 Contributing
-
-Feel free to fork, clone, and extend this pipeline to your use case. PRs are welcome!
-
----
-
-## 🧠 Credits
-
-Maintained by [Giovanni](https://github.com/giovanni-gava) — DevOps & Cloud Engineer
-
----
-
-## 📜 License
-
-MIT License
+Feel free to fork and adapt this repository for your own AWS IaC pipeline.
